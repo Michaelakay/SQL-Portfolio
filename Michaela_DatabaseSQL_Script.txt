@@ -1,0 +1,230 @@
+-- Michaela Kargbo
+-- December 12, 2025
+-- E-Learning Database SQL Script
+-- DDL and DML Statements
+
+-- Create Database
+CREATE DATABASE IF NOT EXISTS elearning_db;
+USE elearning_db;
+
+-- Create Students Table
+CREATE TABLE Students (
+    student_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    enrollment_date DATE DEFAULT (CURDATE())
+);
+
+-- Create Instructors Table
+CREATE TABLE Instructors (
+    instructor_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    expertise_area VARCHAR(100)
+);
+
+-- Create Courses Table
+CREATE TABLE Courses (
+    course_id INT PRIMARY KEY AUTO_INCREMENT,
+    course_title VARCHAR(150) NOT NULL,
+    category VARCHAR(50),
+    instructor_id INT,
+    duration_weeks INT,
+    price DECIMAL(10,2),
+    FOREIGN KEY (instructor_id) REFERENCES Instructors(instructor_id)
+);
+
+-- Create Enrollments Table
+CREATE TABLE Enrollments (
+    enrollment_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT,
+    course_id INT,
+    enrollment_date DATE DEFAULT (CURDATE()),
+    status ENUM('Active', 'Completed', 'Dropped') DEFAULT 'Active',
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+-- Create Assignments Table
+CREATE TABLE Assignments (
+    assignment_id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id INT,
+    title VARCHAR(200) NOT NULL,
+    max_score INT,
+    due_date DATE,
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+-- Create Submissions Table
+CREATE TABLE Submissions (
+    submission_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT,
+    assignment_id INT,
+    submission_date DATE,
+    score DECIMAL(5,2),
+    feedback TEXT,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (assignment_id) REFERENCES Assignments(assignment_id)
+);
+
+-- Create Resources Table
+CREATE TABLE Resources (
+    resource_id INT PRIMARY KEY AUTO_INCREMENT,
+    course_id INT,
+    resource_type VARCHAR(50),
+    resource_url TEXT,
+    uploaded_date DATE,
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+-- Insert Sample Instructor Data
+INSERT INTO Instructors (first_name, last_name, email, expertise_area) VALUES
+('John', 'Smith', 'john.smith@email.com', 'Data Science'),
+('Maria', 'Garcia', 'maria.garcia@email.com', 'Web Development'),
+('David', 'Lee', 'david.lee@email.com', 'Cybersecurity');
+
+-- Insert Sample Students Data 
+INSERT INTO Students (first_name, last_name, email, enrollment_date) VALUES
+('Alice', 'Johnson', 'alice.j@email.com', '2024-01-15'),
+('Bob', 'Williams', 'bob.w@email.com', '2024-02-10'),
+('Charlie', 'Brown', 'charlie.b@email.com', '2024-03-05'),
+('Diana', 'Miller', 'diana.m@email.com', '2024-01-20'),
+('Ethan', 'Davis', 'ethan.d@email.com', '2024-02-28');
+
+-- Insert Sample Courses Data
+INSERT INTO Courses (course_title, category, instructor_id, duration_weeks, price) VALUES
+('Introduction to SQL', 'Databases', 1, 8, 299.99),
+('Python for Beginners', 'Programming', 1, 10, 349.99),
+('Web Development Bootcamp', 'Web Dev', 2, 12, 499.99),
+('Cybersecurity Fundamentals', 'Security', 3, 10, 399.99);
+
+-- Insert Sample Enrollments Data
+INSERT INTO Enrollments (student_id, course_id, enrollment_date, status) VALUES
+(1, 1, '2024-01-20', 'Completed'),
+(1, 2, '2024-02-01', 'Active'),
+(2, 1, '2024-02-12', 'Active'),
+(3, 3, '2024-03-10', 'Active'),
+(4, 4, '2024-01-25', 'Completed'),
+(5, 2, '2024-03-01', 'Active'),
+(2, 3, '2024-02-20', 'Dropped');
+
+-- Insert Sample Assignments Data
+INSERT INTO Assignments (course_id, title, max_score, due_date) VALUES
+(1, 'SQL Basics Quiz', 100, '2024-02-15'),
+(1, 'Database Design Project', 100, '2024-03-01'),
+(2, 'Python Variables Exercise', 50, '2024-03-10'),
+(3, 'HTML/CSS Portfolio', 100, '2024-04-01'),
+(4, 'Security Threat Report', 100, '2024-03-20');
+
+-- Insert Sample Submissions Data
+INSERT INTO Submissions (student_id, assignment_id, submission_date, score, feedback) VALUES
+(1, 1, '2024-02-14', 92.5, 'Excellent work'),
+(1, 2, '2024-02-28', 88.0, 'Good design'),
+(2, 1, '2024-02-15', 76.0, 'Needs improvement'),
+(4, 5, '2024-03-18', 95.0, 'Well researched'),
+(5, 3, '2024-03-09', 45.0, 'Please review variables lesson');
+
+-- Insert Sample Resources Data
+INSERT INTO Resources (course_id, resource_type, resource_url, uploaded_date) VALUES
+(1, 'PDF', 'http://example.com/sql_ebook.pdf', '2024-01-10'),
+(1, 'Video', 'http://example.com/sql_intro.mp4', '2024-01-12'),
+(2, 'Slide Deck', 'http://example.com/python_slides.pptx', '2024-02-05'),
+(3, 'Cheat Sheet', 'http://example.com/html_cheatsheet.pdf', '2024-03-01');
+
+-- Create useful views for PowerBI
+CREATE VIEW student_performance_summary AS
+SELECT 
+    s.student_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    COUNT(DISTINCT e.course_id) AS courses_enrolled,
+    COUNT(DISTINCT sub.assignment_id) AS assignments_submitted,
+    AVG(sub.score) AS avg_score,
+    MAX(sub.score) AS highest_score,
+    MIN(sub.score) AS lowest_score,
+    COUNT(CASE WHEN e.status = 'Completed' THEN 1 END) AS courses_completed
+FROM Students s
+LEFT JOIN Enrollments e ON s.student_id = e.student_id
+LEFT JOIN Submissions sub ON s.student_id = sub.student_id
+GROUP BY s.student_id;
+
+CREATE VIEW course_analytics AS
+SELECT 
+    c.course_id,
+    c.course_title,
+    c.category,
+    CONCAT(i.first_name, ' ', i.last_name) AS instructor_name,
+    COUNT(DISTINCT e.student_id) AS total_students,
+    COUNT(DISTINCT a.assignment_id) AS total_assignments,
+    COUNT(DISTINCT r.resource_id) AS total_resources,
+    AVG(sub.score) AS avg_course_score,
+    c.price,
+    c.duration_weeks
+FROM Courses c
+LEFT JOIN Instructors i ON c.instructor_id = i.instructor_id
+LEFT JOIN Enrollments e ON c.course_id = e.course_id
+LEFT JOIN Assignments a ON c.course_id = a.course_id
+LEFT JOIN Submissions sub ON a.assignment_id = sub.assignment_id
+LEFT JOIN Resources r ON c.course_id = r.course_id
+GROUP BY c.course_id;
+
+CREATE VIEW enrollment_trends AS
+SELECT 
+    e.enrollment_id,
+    e.enrollment_date,
+    e.status,
+    s.student_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    c.course_id,
+    c.course_title,
+    c.category,
+    i.first_name AS instructor_first_name,
+    i.last_name AS instructor_last_name
+FROM Enrollments e
+JOIN Students s ON e.student_id = s.student_id
+JOIN Courses c ON e.course_id = c.course_id
+JOIN Instructors i ON c.instructor_id = i.instructor_id;
+
+CREATE VIEW assignment_submission_details AS
+SELECT 
+    a.assignment_id,
+    a.title AS assignment_title,
+    a.max_score,
+    a.due_date,
+    c.course_title,
+    c.category,
+    s.student_id,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    sub.submission_date,
+    sub.score,
+    sub.feedback,
+    CASE 
+        WHEN sub.score >= (a.max_score * 0.9) THEN 'A'
+        WHEN sub.score >= (a.max_score * 0.8) THEN 'B'
+        WHEN sub.score >= (a.max_score * 0.7) THEN 'C'
+        WHEN sub.score >= (a.max_score * 0.6) THEN 'D'
+        ELSE 'F'
+    END AS grade_letter
+FROM Assignments a
+JOIN Courses c ON a.course_id = c.course_id
+LEFT JOIN Submissions sub ON a.assignment_id = sub.assignment_id
+LEFT JOIN Students s ON sub.student_id = s.student_id;
+
+CREATE VIEW instructor_performance AS
+SELECT 
+    i.instructor_id,
+    CONCAT(i.first_name, ' ', i.last_name) AS instructor_name,
+    i.expertise_area,
+    COUNT(DISTINCT c.course_id) AS courses_taught,
+    COUNT(DISTINCT e.student_id) AS total_students,
+    COUNT(DISTINCT a.assignment_id) AS assignments_created,
+    AVG(sub.score) AS avg_student_score,
+    COUNT(DISTINCT r.resource_id) AS resources_uploaded
+FROM Instructors i
+LEFT JOIN Courses c ON i.instructor_id = c.instructor_id
+LEFT JOIN Enrollments e ON c.course_id = e.course_id
+LEFT JOIN Assignments a ON c.course_id = a.course_id
+LEFT JOIN Submissions sub ON a.assignment_id = sub.assignment_id
+LEFT JOIN Resources r ON c.course_id = r.course_id
+GROUP BY i.instructor_id;
